@@ -1,9 +1,9 @@
 <?php
 
-namespace Envy\Tests;
+namespace Monolyth\Envy\Tests;
 
 use PHPUnit_Framework_TestCase;
-use Envy\Envy;
+use Monolyth\Envy\Environment;
 
 class EnvyTest extends PHPUnit_Framework_TestCase
 {
@@ -18,7 +18,7 @@ class EnvyTest extends PHPUnit_Framework_TestCase
     {
         $config = dirname(__FILE__)."/$config";
         foreach (['test' => 'bar', 'prod' => 'baz'] as $env => $check) {
-            $envy = new Envy($config, $this->config($env));
+            $envy = new Environment($config, $this->config($env));
             $this->assertEquals($check, $envy->foo);
             $this->assertEquals(1, $envy->bar);
         }
