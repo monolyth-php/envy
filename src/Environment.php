@@ -4,7 +4,7 @@ namespace Monolyth\Envy;
 
 use Monomelodies\Kingconf\Config;
 
-class Envy
+class Environment
 {
     private $configLoaded = false;
     private $current = [];
