@@ -1,4 +1,4 @@
-# Envy
+# Monolyth/Envy
 Flexible environment handler for PHP projects (including unit tests!)
 
 When writing PHP projects that are more complicated than a two-page site, you're
@@ -36,23 +36,24 @@ going to run into some real life problems:
 
 ### Composer (recommended)
 ```bash
-$ composer require monomelodies/envy
+$ composer require monolyth/envy
 ```
 
 ### Manual
 1. Download or clone the repository;
-2. Add `/path/to/envy/src` for the namespace `Envy\\` to your autoloader.
+2. Add `/path/to/envy/src` for the namespace `Monolyth\\Envy\\` to your
+   autoloader.
 
 ## Usage
 In a central place in your application (e.g. a bootstrapper that's always
-included) instantiate a "global" `Envy` object:
+included) instantiate a "global" `Environment` object:
 
 ```php
 <?php
 
-use Envy\Envy;
+use Monolyth\Envy\Environment;
 
-$env = new Envy('/path/to/my/configurations', function () {
+$env = new Environment('/path/to/my/configurations', function () {
     return 'production';
 });
 ```
@@ -84,8 +85,8 @@ need), every second level are the settings. E.g., for JSON:
 The second argument is a callable that should return the name of the environment
 you are currently operating in. How you decide that is up to you...
 
-Optionally the `Envy` instance gets passed as an argument there, exposing some
-utility functions.
+Optionally the `Environment` instance gets passed as an argument there, exposing
+some utility functions.
 
 Once you're setup, simply request the values you need:
 
@@ -112,9 +113,9 @@ the constructor callable:
 ```php
 <?php
 
-use Envy\Envy;
+use Monolyth\Envy\Environment;
 
-$env = new Envy('/path/to/config', function ($env) {
+$env = new Environment('/path/to/config', function ($env) {
     if (check_for_cli()) {
         $env->someParameter = 'some value';
         return 'cli';
@@ -147,8 +148,8 @@ settings depending on environment, e.g.:
 }
 ```
 
-If the constructor callable returns `['web', 'production']` the Envy object will
-have the properties `serverName` and `root_path` set properly.
+If the constructor callable returns `['web', 'production']` the Environment
+object will have the properties `serverName` and `root_path` set properly.
 
 ## As a singleton
 Global objects are evil, and some people don't use dependency injection. That's
@@ -157,13 +158,13 @@ why Envy can also be called like a singleton:
 ```php
 <?php
 
-use Envy\Envy;
+use Envy\Environment;
 
-Envy::setConfig('/path/to/config');
-Envy::setEnvironment(function ($env) {
+Environment::setConfig('/path/to/config');
+Environment::setEnvironment(function ($env) {
     // ...
 });
-$env = Envy::instance();
+$env = Environment::instance();
 ```
 
 This is equivalent to the examples above.
@@ -182,7 +183,7 @@ Envy supports simple placeholders in environment variables:
 ```php
 <?php
 
-$env = new Envy('/path/to/config', function ($env) {
+$env = new Environment('/path/to/config', function ($env) {
     $env->user = get_current_user();
 });
 
