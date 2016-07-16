@@ -1,5 +1,5 @@
 {
-    "name": "monomelodies/envy",
+    "name": "monolyth/envy",
     "description": "Flexible environment handler for PHP projects (including unit tests!)",
     "type": "library",
     "license": "MIT",
@@ -17,13 +17,13 @@
     },
     "autoload": {
         "psr-4": {
-            "Envy\\": "src/"
+            "Monolyth\\Envy\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Envy\\": "src/",
-            "Envy\\Tests\\": "tests/"
+            "Monolyth\\Envy\\": "src/",
+            "Monolyth\\Envy\\Tests\\": "tests/"
         }
     }
 }
