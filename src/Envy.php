@@ -1,8 +1,8 @@
 <?php
 
-namespace Envy;
+namespace Monolyth\Envy;
 
-use Kingconf\Config;
+use Monomelodies\Kingconf\Config;
 
 class Envy
 {

@@ -1,6 +1,6 @@
 <?php
 
-namespace Envy;
+namespace Monolyth\Envy;
 
 use LogicException;
 
