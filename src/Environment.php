@@ -27,7 +27,7 @@ class Environment
     public static function instance()
     {
         if (!isset(self::$instance)) {
-            self::$instance = new Envy;
+            self::$instance = new static;
         }
         return self::$instance;
     }
