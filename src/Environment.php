@@ -10,7 +10,7 @@ class Environment
     private $current = [];
     private $settings = [];
     private $globals = [];
-    private $rebuild = true;
+    private $rebuild = false;
     private static $instance;
 
     public function __construct($config = null, callable $callable = null)
@@ -27,7 +27,7 @@ class Environment
     public static function instance()
     {
         if (!isset(self::$instance)) {
-            self::$instance = new Envy;
+            self::$instance = new static;
         }
         return self::$instance;
     }
@@ -44,7 +44,6 @@ class Environment
 
     private function loadConfig($config)
     {
-        $this->rebuild = true;
         if (strtolower(substr($config, -4)) == '.xml') {
             $work = [];
             foreach ((array)(new Config($config)) as $key => $values) {
@@ -60,7 +59,6 @@ class Environment
 
     private function loadEnvironment(callable $callable)
     {
-        $this->rebuild = true;
         if (!$this->configLoaded) {
             throw new ConfigMissingException("A config must be loaded before "
                 ."we can load the environment.");
@@ -70,6 +68,7 @@ class Environment
             $env = [$env];
         }
         $this->current = $env;
+        $this->rebuild = true;
     }
 
     public function usingEnvironment($name)
@@ -97,7 +96,7 @@ class Environment
             }
             foreach ($this->settings as $key => $value) {
                 if ($this->usingEnvironment($key)) {
-                    $this->globals += $value;
+                    $this->globals = array_merge_recursive($this->globals, $value);
                 }
             }
             $this->rebuild = false;
@@ -143,11 +142,12 @@ class Environment
                     $placeholders = true;
                     $value = preg_replace_callback(
                         '@<%\s*(\w+)\s*%>@',
-                        function ($match) {
+                        function ($match) use (&$array, $key) {
                             if (isset($this->globals[$match[1]])) {
                                 return $this->globals[$match[1]];
                             }
-                            return strtoupper($match[1]);
+                            unset($array[$key]);
+                            return '';
                         },
                         $value
                     );
