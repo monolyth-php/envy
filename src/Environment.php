@@ -60,8 +60,7 @@ class Environment
     private function loadEnvironment(callable $callable)
     {
         if (!$this->configLoaded) {
-            throw new ConfigMissingException("A config must be loaded before "
-                ."we can load the environment.");
+            throw new ConfigMissingException("A config must be loaded before we can load the environment.");
         }
         $env = $callable($this);
         if (is_string($env)) {
@@ -96,16 +95,16 @@ class Environment
             }
             foreach ($this->settings as $key => $value) {
                 if ($this->usingEnvironment($key)) {
-                    $this->globals = array_merge_recursive($this->globals, $value);
+                    $this->globals = $this->mergeRecursive($this->globals, $value);
                 }
             }
             $this->rebuild = false;
-            $this->placeholders($this->globals);
             foreach ($this->globals as $key => &$value) {
                 if (is_string($value) && $value{0} == '&') {
                     $value = $this->settings[substr($value, 1)][$key];
                 }
             }
+            $this->placeholders($this->globals);
         }
         if (isset($this->globals[$name])) {
             return $this->globals[$name];
@@ -114,6 +113,21 @@ class Environment
             return true;
         }
         return null;
+    }
+
+    protected function mergeRecursive($arr1, $arr2)
+    {
+        if (!is_array($arr2)) {
+            return $arr2;
+        }
+        foreach ($arr2 as $key => $value) {
+            if (isset($arr1[$key])) {
+                $arr1[$key] = $this->mergeRecursive($arr1[$key], $value);
+            } else {
+                $arr1[$key] = $value;
+            }
+        }
+        return $arr1;
     }
 
     public function __set($name, $value)
@@ -129,32 +143,22 @@ class Environment
 
     private function placeholders(&$array)
     {
-        $placeholders = true;
-        $checks = 0;
-        while ($placeholders) {
-            $placeholders = false;
-            foreach ($array as $key => &$value) {
-                if (!is_scalar($value)) {
-                    if ($this->placeholders($value)) {
-                        $placeholders = true;
-                    }
-                } elseif (preg_match('@<%\s*\w+\s*%>@', $value)) {
-                    $placeholders = true;
-                    $value = preg_replace_callback(
-                        '@<%\s*(\w+)\s*%>@',
-                        function ($match) use (&$array, $key) {
-                            if (isset($this->globals[$match[1]])) {
-                                return $this->globals[$match[1]];
-                            }
-                            unset($array[$key]);
-                            return '';
-                        },
-                        $value
-                    );
-                }
+        foreach ($array as $key => &$value) {
+            if (!is_scalar($value)) {
+                $this->placeholders($value);
+            } elseif (preg_match('@<%\s*\w+\s*%>@', $value)) {
+                $value = preg_replace_callback(
+                    '@<%\s*(\w+)\s*%>@',
+                    function ($match) use (&$array, $key) {
+                        if (isset($this->globals[$match[1]])) {
+                            return $this->globals[$match[1]];
+                        }
+                        return $match[0];
+                    },
+                    $value
+                );
             }
         }
-        return ++$checks > 10 ? false : $placeholders;
     }
 }
 
