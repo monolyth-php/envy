@@ -6,5 +6,5 @@ prod:
     'foo': 'baz'
     'bar': 2
 
-prod+compound:
+compound:
     'bar': 1
