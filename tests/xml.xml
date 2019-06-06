@@ -8,7 +8,7 @@
         <foo>baz</foo>
         <bar>2</bar>
     </prod>
-    <prod-AND-compound>
+    <compound>
         <bar>1</bar>
-    </prod-AND-compound>
+    </compound>
 </envy>
