@@ -2,10 +2,10 @@
 
 namespace Monolyth\Envy\Tests;
 
-use PHPUnit_Framework_TestCase;
+use PHPUnit\Framework\TestCase;
 use Monolyth\Envy\Environment;
 
-class EnvyTest extends PHPUnit_Framework_TestCase
+class EnvyTest extends TestCase
 {
     private function config($env)
     {
