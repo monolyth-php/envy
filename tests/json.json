@@ -7,7 +7,7 @@
         "foo": "baz",
         "bar": 2
     },
-    "compound+prod": {
+    "compound": {
         "bar": 1
     }
 }
