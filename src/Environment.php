@@ -100,7 +100,7 @@ class Environment
             }
             $this->rebuild = false;
             foreach ($this->globals as $key => &$value) {
-                if (is_string($value) && $value{0} == '&') {
+                if (is_string($value) && substr($value, 0, 1) == '&') {
                     $value = $this->settings[substr($value, 1)][$key];
                 }
             }
