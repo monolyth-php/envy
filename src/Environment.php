@@ -2,117 +2,109 @@
 
 namespace Monolyth\Envy;
 
-use Monomelodies\Kingconf\Config;
+use M1\Env\Parser;
 
 class Environment
 {
-    private $configLoaded = false;
+    /** @var string[] */
     private $current = [];
+
+    /** @var mixed[] */
     private $settings = [];
-    private $globals = [];
-    private $rebuild = false;
+
+    /** @var Monolyth\Envy\Environment */
     private static $instance;
 
-    public function __construct($config = null, callable $callable = null)
-    {
-        if (isset($config)) {
-            $this->loadConfig($config);
-        }
-        if (isset($callable)) {
-            $this->loadEnvironment($callable);
-        }
-        self::$instance = $this;
-    }
-
-    public static function instance()
+    public static function instance() : Environment
     {
         if (!isset(self::$instance)) {
-            self::$instance = new static;
+            throw new EnvironmentNotInitializedException;
         }
         return self::$instance;
     }
 
-    public static function setConfig($config)
+    public function __construct(string $path, array $environments)
     {
-        self::instance()->loadConfig($config);
-    }
-
-    public static function setEnvironment(callable $callable)
-    {
-        self::instance()->loadEnvironment($callable);
-    }
-
-    private function loadConfig($config)
-    {
-        if (strtolower(substr($config, -4)) == '.xml') {
-            $work = [];
-            foreach ((array)(new Config($config)) as $key => $values) {
-                $key = str_replace('-AND-', '+', $key);
-                $work[$key] = $values;
+        $this->path = $path;
+        array_walk($environments, function (&$environment) {
+            if (is_callable($environment)) {
+                $environment = $environment();
             }
-        } else {
-            $work = (array)(new Config($config));
+        });
+        $environments = array_filter($environments, function ($environment) {
+            return $environment;
+        });
+        foreach (array_keys($environments) as $environment) {
+            $this->loadEnvironment($environment);
         }
-        $this->settings += $work;
-        $this->configLoaded = true;
+        self::$instance = $this;
     }
 
-    private function loadEnvironment(callable $callable)
-    {
-        if (!$this->configLoaded) {
-            throw new ConfigMissingException("A config must be loaded before we can load the environment.");
-        }
-        $env = $callable($this);
-        if (is_string($env)) {
-            $env = [$env];
-        }
-        $this->current = $env;
-        $this->rebuild = true;
-    }
-
-    public function usingEnvironment($name)
+    public function usingEnvironment($name) : bool
     {
         return in_array($name, $this->current);
     }
 
     public function __get($name)
     {
-        if ($this->rebuild) {
-            foreach ($this->settings as $key => $value) {
-                if (strpos($key, '+')) {
-                    $envs = explode('+', $key);
-                    $matchall = true;
-                    foreach ($envs as $env) {
-                        if (!$this->usingEnvironment($env)) {
-                            $matchall = false;
-                            break;
-                        }
-                    }
-                    if ($matchall) {
-                        $this->globals += $value;
-                    }
-                }
-            }
-            foreach ($this->settings as $key => $value) {
-                if ($this->usingEnvironment($key)) {
-                    $this->globals = $this->mergeRecursive($this->globals, $value);
-                }
-            }
-            $this->rebuild = false;
-            foreach ($this->globals as $key => &$value) {
-                if (is_string($value) && substr($value, 0, 1) == '&') {
-                    $value = $this->settings[substr($value, 1)][$key];
-                }
-            }
-            $this->placeholders($this->globals);
-        }
-        if (isset($this->globals[$name])) {
-            return $this->globals[$name];
+        if (isset($this->settings[$name])) {
+            return $this->settings[$name];
         }
         if (in_array($name, $this->current)) {
             return true;
         }
-        return null;
+        return false;
+    }
+
+    public function __isset($name)
+    {
+        return array_key_exists($name, $this->settings) || $this->usingEnvironment($name);
+    }
+
+    protected function setVariable(string $name, string $value) : void
+    {
+        $name = strtolower($name);
+        if (strpos($name, '_')) {
+            $parts = explode('_', $name, 2);
+            $this->settings[$parts[0]] = $this->expandUnderscores($this->settings[$parts[0]] ?? null, $parts[1], $value);
+        } else {
+            $test = json_decode($value);
+            if ($test) {
+                $value = $test;
+            }
+            $this->settings[$name] = $value;
+        }
+    }
+
+    private function loadEnvironment(string $name) : void
+    {
+        $filename = $name;
+        if (strlen($filename)) {
+            $filename = ".$filename";
+        }
+        if (file_exists("{$this->path}/.env$filename")) {
+            $filename = ".env$filename";
+        } else {
+            // The config file does not exist. Instead of throwing an error,
+            // we fail silently. This allows e.g. .env.test to exist on
+            // developer machines, but not on production.
+            return;
+        }
+        $this->current[] = $name;
+        $env = new Parser(file_get_contents("{$this->path}/$filename"));
+        $vars = $env->getContent();
+        foreach ($vars as $name => $value) {
+            $this->setVariable($name, $value);
+        }
+    }
+
+    private function expandUnderscores(Environment $environment = null, string $name, $value) : Environment
+    {
+        if (!isset($environment)) {
+            $environment = new Environment($this->path, ['' => true]);
+        }
+        $environment->setVariable($name, $value);
+        return $environment;
     }
 
     protected function mergeRecursive($arr1, $arr2)
@@ -128,37 +120,6 @@ class Environment
             }
         }
         return $arr1;
-    }
-
-    public function __set($name, $value)
-    {
-        $this->globals[$name] = $value;
-        $this->rebuild = true;
-    }
-
-    public function __isset($name)
-    {
-        return !is_null($this->__get($name));
-    }
-
-    private function placeholders(&$array)
-    {
-        foreach ($array as $key => &$value) {
-            if (!is_scalar($value)) {
-                $this->placeholders($value);
-            } elseif (preg_match('@<%\s*\w+\s*%>@', $value)) {
-                $value = preg_replace_callback(
-                    '@<%\s*(\w+)\s*%>@',
-                    function ($match) use (&$array, $key) {
-                        if (isset($this->globals[$match[1]])) {
-                            return $this->globals[$match[1]];
-                        }
-                        return $match[0];
-                    },
-                    $value
-                );
-            }
-        }
     }
 }
 
