@@ -45,159 +45,116 @@ $ composer require monolyth/envy
    autoloader.
 
 ## Usage
-In a central place in your application (e.g. a bootstrapper that's always
-included) instantiate a "global" `Environment` object:
+As of version 0.7, `Envy` works exclusively on `.env` files, since that seems to
+be the industry standard. We do still, however, support some extensions.
+
+To construct your environment (somewhere centrally), instantiate an object of
+the `Monolyth\Envy\Environment` class. It takes two parameters: the path to your
+environment configuration files, and a hash where the keys are environment names
+and the values are either booleans or callables returning a boolean. Any
+environment that is or resolves to `false` will be skipped. Hence, you could do
+something like this:
 
 ```php
 <?php
 
 use Monolyth\Envy\Environment;
 
-$env = new Environment('/path/to/my/configurations', function () {
-    return 'production';
-});
+$environment = new Environment(__DIR__, [
+    'prod' => $_SERVER['SERVER_NAME'] == 'example.com',
+    'dev' => $_SERVER['SERVER_NAME'] == 'local.example.dev',
+]);
 ```
 
-The first parameter is the location of the configuration file that defines your
-environments and their differences. Envy supports the following formats out of
-the box:
+After initial instantiation you can either use dependency injection to access
+the environment, or you the static `Environment::instance()` method.
 
-- JSON (`.json`)
-- YAML (`.yml`)
-- PHP .ini-style (`.ini`)
-- XML (`.xml`)
-- PHP array or simple object (`.php`)
+You can define as many environments as you want, since multiple can be valid at
+any given time. E.g. both `prod` and `web` or `prod` and `cli`.
 
-The top-level key is simply the name of the environment (define as many as you
-need), every second level are the settings. E.g., for JSON:
+Keep in mind that existing keys will be overwritten by subsequent environments
+defining the same key.
 
-```json
-{
-    "production": {
-        "root-path": "/var/www"
-    },
-    "development": {
-        "root-path": "/home/monomelodies/my-project"
+## Configuration file naming
+We're using `.env` format, so configuration files should be called either `.env`
+(for "generic" or "global" variables, the environment `''` in other words) or
+alternatively `.env.ENVIRONMENT_NAME`. Note that these should _not_ be included
+in your VCS! That's the whole idea of `.env` files. The only exception is a
+`.env.example` file with dummy values, but which gives other users a
+comprehensive list of stuff they would want to set.
+
+## Checking for environments
+You'll often want to check for environments. All defined environments will be
+available on the `$environment` object as `true`, else `false`. So you can do
+something like the following:
+
+```php
+<?php
+
+if ($environment->prod) {
+    if (!$environment->cli) {
+        // ... logic ...
     }
+} elseif ($environment->dev) {
+    throw new Exception('something went wrong!');
 }
 ```
 
-The second argument is a callable that should return the name of the environment
-you are currently operating in. How you decide that is up to you...
+## Using defined environment variables
+Like the environments themselves, variables are available as properties on the
+environment object, or will be `false` if undefined.
 
-Optionally the `Environment` instance gets passed as an argument there, exposing
-some utility functions.
+Usually (not sure if by convention or as an actual requirement...) environment
+variables are in UPPERCASE. This is ugly in PHP. Hence, all variables are
+lowercased for your convenience:
 
-Once you're setup, simply request the values you need:
+```
+FOO=bar
+```
 
 ```php
 <?php
 
-// $env configuration as described above...
-
-include $env->root_path.'/some-file.php';
+var_dump($environment->foo); // string "bar"
 ```
 
-You can also set values after creation, e.g. the current language:
+## Custom feature: JSON support
+For any value that can be `json_decode`d, it's actual decoded value is used
+instead.
 
-```php
+## Custom feature: underscore object expansion
+Okay, that's a crappy name. What this means is that for any variable names
+containing underscores, they are actually treated as "namespaces" and stored
+under sub-environments. Consider the following:
+
+```
+DATABASE_NAME=foo
+DATABASE_VENDOR=pgsql
+DATABASE_USER=user
+DATABASE_PASS=pass
+```
+
+This would work, but is annoying. Envy automagically turns this into:
+
+```
 <?php
 
-// Assuming $user is a logged in user...
-$env->language = $user->language;
+var_dump($environment->database); // object: {name: foo, vendor: pgsql, user: user, pass: pass}
 ```
-
-Note that this can also be done depending on the environment you determined in
-the constructor callable:
-
-```php
-<?php
-
-use Monolyth\Envy\Environment;
-
-$env = new Environment('/path/to/config', function ($env) {
-    if (check_for_cli()) {
-        $env->someParameter = 'some value';
-        return 'cli';
-    } else {
-        $env->someParameter = 'something else';
-        return 'web';
-    }
-});
-```
-
-The callable used on construction may return multiple environments in an array.
-The found settings are then merged together (with the last defined taking
-precedence). This is extremely useful for keeping your config DRY and grouping
-settings depending on environment, e.g.:
-
-```json
-{
-    "web": {
-        "serverName": "example.com"
-    },
-    "cli": {
-        "serverName": "localhost"
-    },
-    "production": {
-        "root-path": "/var/www"
-    },
-    "development": {
-        "root-path": "/home/monomelodies/my-project"
-    }
-}
-```
-
-If the constructor callable returns `['web', 'production']` the Environment
-object will have the properties `serverName` and `root_path` set properly.
-
-## As a singleton
-Global objects are evil, and some people don't use dependency injection. That's
-why Envy can also be called like a singleton:
-
-```php
-<?php
-
-use Envy\Environment;
-
-Environment::setConfig('/path/to/config');
-Environment::setEnvironment(function ($env) {
-    // ...
-});
-$env = Environment::instance();
-```
-
-This is equivalent to the examples above.
 
 ## Placeholders
-Envy supports simple placeholders in environment variables:
-
-```json
-{
-    "test": {
-        "somevar": "my name is <% user %>"
-    }
-}
-```
-
-```php
-<?php
-
-$env = new Environment('/path/to/config', function ($env) {
-    $env->user = get_current_user();
-});
+Default `.env` placeholders are supported, e.g.:
 
 ```
+NAME=marijn
+PATH=/home/${marijn}/Documents
+```
 
-These replacements must be defined at the root level of your environment
-configuration to work.
-
-## Environment-conditional variables
-You can specify variables that are only valid for combinations of environments,
-e.g. `dev+programmer_bob` versus `dev+programmer-alice`. Just use the plus sign
-in the `environment` key. These combined keys take precendence of single keys.
-
-> For XML-based config files (where `+` would be an illegal character), use the
-> `-AND-` (in caps, this is important!) delimiter instead, e.g.
-> `<dev-AND-programmer-bob>...</dev-AND-programmer-bob>`.
+## Gotchas and caveats
+- Do not give environments names that are also used as variables. Variables take
+  precendence, so the results won't be what you expect.
+- Similar for "underscore expanded" objects and JSON. Depending on the order it
+  _might_ produce a sort-of working result, but it's probably not going to be
+  what you want. Just take care here; either use JSON or expansion, but don't
+  mix and match.
 
