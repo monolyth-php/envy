@@ -158,3 +158,13 @@ PATH=/home/${marijn}/Documents
   what you want. Just take care here; either use JSON or expansion, but don't
   mix and match.
 
+Note, however, the following is not a problem:
+
+```
+DATABASE_NAME=foo
+DATABASE_CONFIG={"foo":"bar"}
+```
+
+...since the JSON parsing won't be done until after the underscores have been
+expanded.
+
