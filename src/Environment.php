@@ -147,7 +147,7 @@ class Environment
     private function expandUnderscores(Environment $environment = null, string $name, $value) : Environment
     {
         if (!isset($environment)) {
-            $environment = new Environment($this->path, ['' => true]);
+            $environment = new Environment($this->path, []);
         }
         $environment->setVariable($name, $value);
         return $environment;
