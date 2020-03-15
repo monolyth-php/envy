@@ -29,40 +29,5 @@ return function () : Generator {
         assert($environment->some->nested->object->var === 1);
         assert($environment->some->other->object === 2);
     };
-    /*
-    private function runtests($config)
-    {
-        $config = dirname(__FILE__)."/$config";
-        foreach (['test' => 'bar', 'prod' => 'baz'] as $env => $check) {
-            $envy = new Environment($config, $this->config($env));
-            $this->assertEquals($check, $envy->foo);
-            $this->assertEquals(1, $envy->bar);
-        }
-    }
-
-    public function testJson()
-    {
-        $this->runtests('json.json');
-    }
-
-    public function testIni()
-    {
-        $this->runtests('ini.ini');
-    }
-
-    public function testPhp()
-    {
-        $this->runtests('php.php');
-    }
-
-    public function testYaml()
-    {
-        $this->runtests('yaml.yml');
-    }
-
-    public function testXml()
-    {
-        $this->runtests('xml.xml');
-    }*/
 };
 
