@@ -119,7 +119,7 @@ var_dump($environment->foo); // string "bar"
 ```
 
 ## Custom feature: JSON support
-For any value that can be `json_decode`d, it's actual decoded value is used
+For any value that can be `json_decode`d, its actual decoded value is used
 instead.
 
 ## Custom feature: underscore object expansion
@@ -141,6 +141,8 @@ This would work, but is annoying. Envy automagically turns this into:
 
 var_dump($environment->database); // object: {name: foo, vendor: pgsql, user: user, pass: pass}
 ```
+
+This works for as many levels of nesting as you'd need.
 
 ## Placeholders
 Default `.env` placeholders are supported, e.g.:
@@ -167,4 +169,15 @@ DATABASE_CONFIG={"foo":"bar"}
 
 ...since the JSON parsing won't be done until after the underscores have been
 expanded.
+
+## Differences from other DOTENV loaders
+- Envy supports JSON and "underscore expansion" for your convenience;
+- Envy supports multiple environments based on conditions, e.g. you can have
+  `.env.dev`, `.env.cli` and `.env.test` in the same folder and decide at run
+  time which one(s) is/are applicable;
+- Envy supports the `->$environment` check so your code can also do different
+  things based on the environment(s) loaded. E.g. during tests you may want to
+  load certains mocks instead of your regular dependencies, and during
+  development you don't want to send mails to actual users, but just to the
+  developer in question for review.
 
