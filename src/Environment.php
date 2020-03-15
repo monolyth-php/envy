@@ -81,7 +81,7 @@ class Environment
      */
     public function __isset(string $name) : bool
     {
-        return array_key_exists($name, $this->settings) || $this->usingEnvironment($name);
+        return array_key_exists($name, $this->settings) || in_array($name, $this->current);
     }
 
     /**
