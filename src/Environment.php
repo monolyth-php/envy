@@ -85,6 +85,16 @@ class Environment
     }
 
     /**
+     * Get environment settings as an array.
+     *
+     * @return array
+     */
+    public function getArrayCopy() : array
+    {
+        return (array)$this->settings;
+    }
+
+    /**
      * Helper to set a variable/value. This automatically expands
      * underscore_separated names to underscore->separated objects.
      *
