@@ -89,7 +89,7 @@ class Environment
      *
      * @return array
      */
-    public function getArrayCopy() : array
+    public function getCopy() : array
     {
         return (array)$this->settings;
     }
