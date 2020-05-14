@@ -126,6 +126,7 @@ class Environment
      */
     private function loadEnvironment(string $name) : void
     {
+        $this->current[] = $name;
         $filename = $name;
         if (strlen($filename)) {
             $filename = ".$filename";
@@ -138,7 +139,6 @@ class Environment
             // developer machines, but not on production.
             return;
         }
-        $this->current[] = $name;
         $env = new Parser(file_get_contents("{$this->path}/$filename"));
         $vars = $env->getContent();
         foreach ($vars as $name => $value) {
