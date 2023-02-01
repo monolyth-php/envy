@@ -6,14 +6,13 @@ use M1\Env\Parser;
 
 class Environment
 {
-    /** @var string[] */
-    private $current = [];
+    private array $current = [];
 
-    /** @var mixed[] */
-    private $settings = [];
+    private array $settings = [];
 
-    /** @var Monolyth\Envy\Environment */
-    private static $instance;
+    private static self $instance;
+
+    private string $path;
 
     /**
      * After initial construction, you can use this method to retrieve a
