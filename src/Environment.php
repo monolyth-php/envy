@@ -153,7 +153,7 @@ class Environment
      * @param mixed $value
      * @return Monolyth\Envy\Environment
      */
-    private function expandUnderscores(Environment $environment = null, string $name, $value) : Environment
+    private function expandUnderscores(?Environment $environment = null, string $name, $value) : Environment
     {
         if (!isset($environment)) {
             $environment = new Environment($this->path, []);
